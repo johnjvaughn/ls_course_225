@@ -108,7 +108,9 @@ var todoManager = {
   },
 
   listCompleted: function() {
-    return this.todoList.searchFor({ 'completed': true });
+    return this.todoList.searchFor({
+      'completed': true,
+    });
   },
 
   listAllDate: function(month, year) {
@@ -218,11 +220,12 @@ p(todoManager.listAll(), 'todoManager.listAll() after adding a todo'); // todos 
 // Test Update & Clone
 todoManager.todoList.update(4, {title: 'No! buy more chocolate', year: '2000', completed: true});
 var todo4 = todoManager.todoList.cloneTodo(4);
-p(todo4, 'cloneTodo of todo with id 4'); //{id: 4, title: "No! buy more chocolate", year: 2000, month: 11, completed: true, description: "For the daily fiber needs"}
-todo4.title = '';
-p(todo4, 'edited cloneTodo'); //{id: 4, title: "", year: 2000, month: 11, completed: true, description: "For the daily fiber needs"}
+p(todo4, 'todoManager.todoList.cloneTodo(4) clone of todo with id 4'); //{id: 4, title: "No! buy more chocolate", year: 2000, month: 11, completed: true, description: "For the daily fiber needs"}
+todo4.title = '***messed up title***';
+delete todo4.month;
+p(todo4, 'edited clone\'s title and deleted month'); //{id: 4, title: "", year: 2000, completed: true, description: "For the daily fiber needs"}
 // test that the original is untouched:
-p(todoManager.todoList.cloneTodo(4), 'todoManager.todoList.cloneTodo(4)'); 
+p(todoManager.todoList.cloneTodo(4), 'todoManager.todoList.cloneTodo(4) new clone should be unchanged'); 
 // {id: 4, title: "No! buy more chocolate", year: 2000, month: 11, completed: true, description: "For the daily fiber needs"}
 
 // Test Delete
@@ -232,7 +235,7 @@ p(todoManager.listAll(), 'todoManager.listAll() after deleting todo ID 2'); // a
 // {id: 3, title: "Buy chocolate", year: 2017, month: 1, description: "For the cheat day", completed: false}
 // {id: 5, title: "Buy Bread", year: 2017, month: 4, description: "Whole wheat sandwich bread", completed: false}
 // {id: 4, title: "No! buy more chocolate", year: 2000, month: 11, description: "For the daily fiber needs", completed: true}
-p(deletedTodo, 'deleted todo with ID 2');
+p(deletedTodo, 'the deleted todo with ID 2');
 // {id: 2, title: "Buy Apples", year: 2017, month: 11, description: "An apple a day keeps the doctor away"}
 
 
@@ -254,7 +257,7 @@ p(todoManager.listAllDate(1, 2017), 'todoManager.listAllDate(1, 2017)');
 p(todoManager.listCompletedDate(1, 2017), 'todoManager.listCompletedDate(1, 2017)');
 // {id: 3, title: "Buy chocolate", year: 2017, month: 1, description: "For the cheat day", completed: true}
 
-p(todoManager.listCompletedDate(1, 2015), 'todoManager.listCompletedDate(1, 2015)');
+p(todoManager.listCompletedDate(1, 2015), 'todoManager.listCompletedDate(1, 2015) -- no results');
 // []
 
 //make sure we are getting copies, not originals
