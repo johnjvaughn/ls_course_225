@@ -1,56 +1,33 @@
+//TodoList
+
 var TodoList = function(todosData) {
   if (!(this instanceof TodoList)) {
     return new TodoList(todosData);
   }
 
-  var Todo = {
-    id: 0,
-    title: '',
-    completed: false,
-    month: '',
-    year: '',
-    description: '',
+  var Todo = function(todoData, id) {
+    if (!(this instanceof Todo)) {
+      return new Todo(todoData, id);
+    }
+    var today = new Date();
 
-    isWithinMonthYear: function(month, year) {
+    this.id = id;
+    this.title = String(todoData.title);
+    this.month = +todoData.month || today.getMonth() + 1;
+    this.year = +todoData.year || today.getFullYear();
+    this.description = String(todoData.description);
+    this.completed = todoData.hasOwnProperty('completed') ? todoData.completed : false;
+    
+    this.isWithinMonthYear = function(month, year) {
       return (this.month === +month && this.year === +year);
-    },
-
-    setDate: function(month, year) {
-      var today = new Date();
-      var curMonth = today.getMonth() + 1;
-      var curYear = today.getFullYear();
-      year = year || this.year; // if no year or month, keep any already-set values in this
-      month = month || this.month;
-
-      if (year) {
-        this.year = +year;
-        if (month) {
-          this.month = +month;
-        } else {  // if year is in future and no month given, set month to Jan.
-          this.month = (this.year <= curYear) ? curMonth : 1;
-        }
-      } else  {
-        this.year = curYear;
-        this.month = (month) ? +month : curMonth;
-        // if year not given and month is before current month, set the year to next year
-        if (this.month < curMonth) this.year += 1;
-      }
-    },
-
-    init: function(todoData, id) {
-      this.id = id || this.id;
-      if (todoData.hasOwnProperty('title')) this.title = String(todoData.title);
-      this.setDate(todoData.month, todoData.year);
-      if (todoData.hasOwnProperty('description')) this.description = String(todoData.description);
-      if (todoData.hasOwnProperty('completed')) this.completed = todoData.completed;
-      return this;
-    },
+    };
   };
 
   var todos = [];
+  var lastId = todosData.length;
 
   todosData.forEach(function (todoData, index) {
-    todo = Object.create(Todo).init(todoData, index + 1);
+    todo = new Todo(todoData, index + 1);
     todos.push(todo);
   });
 
@@ -60,15 +37,23 @@ var TodoList = function(todosData) {
     }
   };
 
+  this.cloneTodo = function(todoId) {
+    var index = this.indexOfId(todoId);
+
+    if (index === undefined) return;
+    return new Todo(todos[index], todoId);
+  };
+
   this.nextIdNum = function() {
-    if (todos.length > 0) {
-      return todos[todos.length - 1].id + 1;
-    }
-    return 1;
+    return (lastId += 1);
   };
 
   this.add = function(todoData) {
-    var todo = Object.create(Todo).init(todoData, this.nextIdNum());
+    if (todoData.id && (this.indexOfId(todoData.id) !== undefined)) {
+      throw new Error('Attempt to add new todo with an ID that already exists.');
+    }
+    var id = todoData.id ? todoData.id : this.nextIdNum();
+    var todo = new Todo(todoData, id);
 
     todos.push(todo);
     return todo.id;
@@ -77,14 +62,20 @@ var TodoList = function(todosData) {
   this.delete = function(todoId) {
     var todoIndex = this.indexOfId(todoId);
 
-    return (todoIndex === undefined) ? undefined : todos.splice(todoIndex, 1);
+    return (todoIndex === undefined) ? undefined : todos.splice(todoIndex, 1)[0];
   };
 
   this.update = function(todoId, todoData) {
     var index = this.indexOfId(todoId);
+    var todo;
 
     if (index === undefined) return;
-    todos[index].init(todoData);
+    todo = this.delete(todoId);
+    Object.keys(todoData).forEach(function (prop) {
+      todo[prop] = todoData[prop];
+    });
+
+    this.add(todo);
     return todos[index];
   };
 
@@ -92,35 +83,43 @@ var TodoList = function(todosData) {
     return this.update(todoId, { completed: true });
   }
 
-  this.search = function(searchObj) {
-    return todos.filter(function (todo) {
-      return Object.keys(searchObj).every(function (prop) {
+  this.searchFor = function(searchObj) {
+    var todoCopies = [];
+
+    todos.forEach(function (todo) {
+      if (Object.keys(searchObj).every(function (prop) {
         return searchObj[prop] === todo[prop];
-      });
-    });
+      })) {
+        todoCopies.push(this.cloneTodo(todo.id));
+      }
+    }, this);
+
+    return todoCopies;
   }
 }
+
+// todoManager
 
 var todoManager = {
   todoList: {},
 
-  all: function() {
-    return this.todoList.search({});
+  listAll: function() {
+    return this.todoList.searchFor({});
   },
 
-  completed: function() {
-    return this.todoList.search({ 'completed': true });
+  listCompleted: function() {
+    return this.todoList.searchFor({ 'completed': true });
   },
 
-  allInDate: function(month, year) {
-    return this.todoList.search({
+  listAllDate: function(month, year) {
+    return this.todoList.searchFor({
       'month': +month,
       'year': +year,
     });
   },
 
-  completedInDate: function(month, year) {
-    return this.todoList.search({
+  listCompletedDate: function(month, year) {
+    return this.todoList.searchFor({
       'completed': true,
       'month': +month,
       'year': +year,
@@ -133,6 +132,7 @@ var todoManager = {
   },
 };
 
+// Examples and Tests
 
 var todoData1 = {
   title: 'Buy Milk',
@@ -170,86 +170,104 @@ var todoData5 = {
 }
 
 var todoData6 = {
-  title: 'Buy Veggies',
-  //month intentially left out
+  title: 'Buy Veggies', //intentionally set same as another todo title
+  //month intentionally left out
   year: 2016, //intentionally entered as number
   description: ['Gotta have more ', 'vegetables'], //intentionally entered as array
 }
 
 var todoSet = [todoData1, todoData2, todoData3, todoData4];
 
-todoManager.init(todoSet);
-todoManager.todoList.add(todoData5);
-
-pa(todoManager.all());
-todoManager.todoList.update(4, {title: 'No! buy more chocolate', year: '2000', completed: true});
-pa(todoManager.all());
-todoManager.todoList.delete(2);
-pa(todoManager.all());
-todoManager.todoList.add(todoData6);
-pa(todoManager.all());
-todoManager.todoList.complete(3);
-
-pa(todoManager.completed());
-pa(todoManager.allInDate(1, 2017));
-pa(todoManager.completedInDate(1, 2017));
-pa(todoManager.completedInDate(11, 2000));
-
-var testSet = [
-  {
-    id: 1,
-    title: 'Buy Milk',
-    month: 1,
-    year: 2017,
-    completed: false,
-    description: 'Milk for baby',
-  },
-
-  {
-    id: 2,
-    title: 'Buy Apples',
-    month: 11,
-    year: 2017,
-    completed: false,
-    description: 'An apple a day keeps the doctor away',
-  },
-
-  {
-    id: 3,
-    title: 'Buy chocolate',
-    month: 1,
-    year: 2018,
-    completed: true,
-    description: 'For the cheat day',
-  },
-
-  {
-    id: 4,
-    title: 'No! buy more chocolate',
-    month: 11,
-    year: 2000,
-    completed: true,
-    description: 'For the daily fiber needs',
-  },
-
-  {
-    id: 5,
-    title: 'Buy Bread',
-    month: 4,
-    year: 2018,
-    completed: false,
-    description: 'Whole wheat sandwich bread',
-  },
-
-  {
-    id: 6,
-    title: 'Buy Veggies',
-    month: 11,
-    year: 2016,
-    completed: false,
-    description: 'Gotta have more vegetables',
+// p => console.log wrapper for nice output
+function p(item, description) {
+  if (description) console.log(description);
+  if (Array.isArray(item)) {
+    console.log('---Array---');
+    item.forEach((value) => console.log(value));
+    console.log("----end----");
+  } else {
+    console.log(item);
   }
-];
+  console.log('\n');
+}
+
+// Test todoManager Init
+todoManager.init(todoSet);
+
+p(todoManager.listAll(), 'todoManager.listAll()'); // array of todos 1 thru 4
+// {id: 1, title: "Buy Milk", year: 2017, month: 1, description: "Milk for baby"}
+// {id: 2, title: "Buy Apples", year: 2017, month: 11, description: "An apple a day keeps the doctor away"}
+// {id: 3, title: "Buy chocolate", year: 2017, month: 1, description: "For the cheat day"}
+// {id: 4, title: "Buy Veggies", year: 2017, month: 11, description: "For the daily fiber needs"}
+
+// Test Add
+todoManager.todoList.add(todoData5);
+try {
+  todoManager.todoList.add({id: 3, title: 'duplicate ID'}); //try to add an item with an id that already exists
+} catch (err) {
+  p(err.name + ': ' + err.message, 'error thrown intentionally');
+  //Error: Attempt to add new todo with an ID that already exists.
+}
+p(todoManager.listAll(), 'todoManager.listAll() after adding a todo'); // todos 1 thru 5
+// {id: 1, title: "Buy Milk", year: 2017, month: 1, description: "Milk for baby"}
+// {id: 2, title: "Buy Apples", year: 2017, month: 11, description: "An apple a day keeps the doctor away"}
+// {id: 3, title: "Buy chocolate", year: 2017, month: 1, description: "For the cheat day"}
+// {id: 4, title: "Buy Veggies", year: 2017, month: 11, description: "For the daily fiber needs"}
+// {id: 5, title: "Buy Bread", year: 2017, month: 4, description: "Whole wheat sandwich bread"}
+
+// Test Update & Clone
+todoManager.todoList.update(4, {title: 'No! buy more chocolate', year: '2000', completed: true});
+var todo4 = todoManager.todoList.cloneTodo(4);
+p(todo4, 'cloneTodo of todo with id 4'); //{id: 4, title: "No! buy more chocolate", year: 2000, month: 11, completed: true, description: "For the daily fiber needs"}
+todo4.title = '';
+p(todo4, 'edited cloneTodo'); //{id: 4, title: "", year: 2000, month: 11, completed: true, description: "For the daily fiber needs"}
+// test that the original is untouched:
+p(todoManager.todoList.cloneTodo(4), 'todoManager.todoList.cloneTodo(4)'); 
+// {id: 4, title: "No! buy more chocolate", year: 2000, month: 11, completed: true, description: "For the daily fiber needs"}
+
+// Test Delete
+var deletedTodo = todoManager.todoList.delete(2);
+p(todoManager.listAll(), 'todoManager.listAll() after deleting todo ID 2'); // array of todos 1 and 3 thru 5
+// {id: 1, title: "Buy Milk", year: 2017, month: 1, description: "Milk for baby", completed: false}
+// {id: 3, title: "Buy chocolate", year: 2017, month: 1, description: "For the cheat day", completed: false}
+// {id: 5, title: "Buy Bread", year: 2017, month: 4, description: "Whole wheat sandwich bread", completed: false}
+// {id: 4, title: "No! buy more chocolate", year: 2000, month: 11, description: "For the daily fiber needs", completed: true}
+p(deletedTodo, 'deleted todo with ID 2');
+// {id: 2, title: "Buy Apples", year: 2017, month: 11, description: "An apple a day keeps the doctor away"}
 
 
-assertEqual(testSet, todoManager.all);
+// Test Add again
+todoManager.todoList.add(todoData6); 
+p(todoManager.todoList.cloneTodo(6), 'todoManager.todoList.cloneTodo(6) after adding it'); 
+// {id: 6, title: "Buy Veggies", year: 2016, month: 11, description: "Gotta have more ,vegetables", completed: false}
+
+// Test todoManager list functions:
+
+todoManager.todoList.complete(3);
+p(todoManager.listCompleted(), 'todoManager.listCompleted() after completing ID 3');
+// {id: 3, title: "Buy chocolate", year: 2017, month: 1, description: "For the cheat day", completed: true}
+// {id: 4, title: "No! buy more chocolate", year: 2000, month: 11, description: "For the daily fiber needs", completed: true}
+
+p(todoManager.listAllDate(1, 2017), 'todoManager.listAllDate(1, 2017)');
+// {id: 1, title: "Buy Milk", year: 2017, month: 1, description: "Milk for baby", completed: false}
+
+p(todoManager.listCompletedDate(1, 2017), 'todoManager.listCompletedDate(1, 2017)');
+// {id: 3, title: "Buy chocolate", year: 2017, month: 1, description: "For the cheat day", completed: true}
+
+p(todoManager.listCompletedDate(1, 2015), 'todoManager.listCompletedDate(1, 2015)');
+// []
+
+//make sure we are getting copies, not originals
+var compNov2000 = todoManager.listCompletedDate(11, 2000)[0];
+p(compNov2000, 'object returned from todoManager.listCompletedDate(11, 2000)[0]');
+// {id: 4, title: "No! buy more chocolate", year: 2000, month: 11, description: "For the daily fiber needs", completed: true}
+
+compNov2000.title = '';
+compNov2000.description = '';
+p(compNov2000, 'same object with title and description blanked');
+// {id: 4, title: "", year: 2000, month: 11, description: "", completed: true}
+
+compNov2000 = todoManager.listCompletedDate(11, 2000)[0];
+p(compNov2000, 'todoManager.listCompletedDate(11, 2000)[0] (original should be unchanged)');
+// {id: 4, title: "No! buy more chocolate", year: 2000, month: 11, description: "For the daily fiber needs", completed: true}
+

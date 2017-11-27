@@ -16,12 +16,9 @@ const pa = (arr) => {
   }
 }
 
-function assertEqual(expected, func, args) {
-  var funcArgs = Array.prototype.slice.call(arguments, 2)
-  var funcResult = func(...funcArgs);
-
-  console.log(func.name, funcArgs, 'should result in: ' + expected);
-  console.log(eql(funcResult, expected) ? 'passed' : 'FAILED : ' + JSON.stringify(funcResult));
+function assertEqual(expected, evaluated, funcName) {
+  console.log(funcName, ' should result in: ' + JSON.stringify(expected));
+  console.log(eql(evaluated, expected) ? 'passed' : 'FAILED : ' + JSON.stringify(evaluated));
 }
 
 function partial(primary, arg1) {
