@@ -1,4 +1,6 @@
-//TodoList
+/*
+  TodoList
+*/
 
 var TodoList = function(todosData) {
   if (!(this instanceof TodoList)) {
@@ -17,19 +19,19 @@ var TodoList = function(todosData) {
     this.year = +todoData.year || today.getFullYear();
     this.description = String(todoData.description);
     this.completed = todoData.hasOwnProperty('completed') ? todoData.completed : false;
-    
+
     this.isWithinMonthYear = function(month, year) {
       return (this.month === +month && this.year === +year);
     };
   };
 
-  var todos = [];
-  var lastId = todosData.length;
+  var todos = []; // keep private
 
   todosData.forEach(function (todoData, index) {
-    todo = new Todo(todoData, index + 1);
-    todos.push(todo);
+    todos.push(new Todo(todoData, index + 1));
   });
+
+  this.lastId = todosData.length;
 
   this.indexOfId = function(todoId) {
     for (var i = 0; i < todos.length; i += 1) {
@@ -42,10 +44,6 @@ var TodoList = function(todosData) {
 
     if (index === undefined) return;
     return new Todo(todos[index], todoId);
-  };
-
-  this.nextIdNum = function() {
-    return (lastId += 1);
   };
 
   this.add = function(todoData) {
@@ -65,24 +63,6 @@ var TodoList = function(todosData) {
     return (todoIndex === undefined) ? undefined : todos.splice(todoIndex, 1)[0];
   };
 
-  this.update = function(todoId, todoData) {
-    var index = this.indexOfId(todoId);
-    var todo;
-
-    if (index === undefined) return;
-    todo = this.delete(todoId);
-    Object.keys(todoData).forEach(function (prop) {
-      todo[prop] = todoData[prop];
-    });
-
-    this.add(todo);
-    return todos[index];
-  };
-
-  this.complete = function(todoId) {
-    return this.update(todoId, { completed: true });
-  }
-
   this.searchFor = function(searchObj) {
     var todoCopies = [];
 
@@ -98,7 +78,31 @@ var TodoList = function(todosData) {
   }
 }
 
-// todoManager
+TodoList.prototype.nextIdNum = function() {
+  return (this.lastId += 1);
+};
+
+TodoList.prototype.update = function(todoId, todoData) {
+  var index = this.indexOfId(todoId);
+  var todo;
+
+  if (index === undefined) return;
+  todo = this.delete(todoId);
+  Object.keys(todoData).forEach(function (prop) {
+    todo[prop] = todoData[prop];
+  });
+
+  this.add(todo);
+  return index;
+};
+
+TodoList.prototype.complete = function(todoId) {
+  return this.update(todoId, { completed: true });
+}
+
+/*
+ todoManager
+*/
 
 var todoManager = {
   todoList: {},
@@ -134,7 +138,9 @@ var todoManager = {
   },
 };
 
-// Examples and Tests
+/*
+ Examples and Tests
+*/
 
 var todoData1 = {
   title: 'Buy Milk',
@@ -180,12 +186,16 @@ var todoData6 = {
 
 var todoSet = [todoData1, todoData2, todoData3, todoData4];
 
-// p => console.log wrapper for nice output
+/*
+ p => console.log wrapper for nice output
+*/
 function p(item, description) {
   if (description) console.log(description);
   if (Array.isArray(item)) {
     console.log('---Array---');
-    item.forEach((value) => console.log(value));
+    item.forEach(function(value) {
+      console.log(value);
+    });
     console.log("----end----");
   } else {
     console.log(item);
@@ -193,9 +203,14 @@ function p(item, description) {
   console.log('\n');
 }
 
+/*
+ Tests
+*/
+
 // Test todoManager Init
 todoManager.init(todoSet);
 
+p(todoManager.todoList, 'todoManager.todoList');
 p(todoManager.listAll(), 'todoManager.listAll()'); // array of todos 1 thru 4
 // {id: 1, title: "Buy Milk", year: 2017, month: 1, description: "Milk for baby"}
 // {id: 2, title: "Buy Apples", year: 2017, month: 11, description: "An apple a day keeps the doctor away"}
@@ -237,7 +252,6 @@ p(todoManager.listAll(), 'todoManager.listAll() after deleting todo ID 2'); // a
 // {id: 4, title: "No! buy more chocolate", year: 2000, month: 11, description: "For the daily fiber needs", completed: true}
 p(deletedTodo, 'the deleted todo with ID 2');
 // {id: 2, title: "Buy Apples", year: 2017, month: 11, description: "An apple a day keeps the doctor away"}
-
 
 // Test Add again
 todoManager.todoList.add(todoData6); 
